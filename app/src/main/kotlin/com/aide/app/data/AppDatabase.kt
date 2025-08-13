@@ -6,13 +6,15 @@ import androidx.room.RoomDatabase
 import android.content.Context
 
 @Database(
-	entities = [Note::class, Expense::class],
-	version = 1,
+	entities = [Note::class, Expense::class, Project::class, BuildJob::class],
+	version = 2,
 	exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
 	abstract fun noteDao(): NoteDao
 	abstract fun expenseDao(): ExpenseDao
+	abstract fun projectDao(): ProjectDao
+	abstract fun buildJobDao(): BuildJobDao
 
 	companion object {
 		@Volatile private var instance: AppDatabase? = null
