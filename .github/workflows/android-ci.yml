@@ -28,7 +28,10 @@ jobs:
         with:
           gradle-version: 8.7
           cache-disabled: true
-          develocity-injection-enabled: false
+          develocity-injection-enabled: true
+          build-scan-publish: true
+          build-scan-terms-of-service-url: https://gradle.com/terms-of-service
+          build-scan-terms-of-service-agree: yes
 
       - name: Install Android SDK (cmdline-tools)
         uses: android-actions/setup-android@v3
@@ -49,13 +52,13 @@ jobs:
           fi
 
       - name: Print Gradle Version
-        run: ./gradlew -v
+        run: ./gradlew -v --scan
 
       - name: Compile Kotlin (Debug) with verbose logs
-        run: ./gradlew :app:compileDebugKotlin --no-daemon --no-parallel --stacktrace --console=plain --info
+        run: ./gradlew :app:compileDebugKotlin --no-daemon --no-parallel --stacktrace --console=plain --info --scan
 
       - name: Clean and Assemble Debug
         env:
           ORG_GRADLE_PROJECT_orgGradleJvmArgs: "-Xmx3g -Dfile.encoding=UTF-8"
         run: |
-          ./gradlew clean :app:assembleDebug --no-daemon --no-parallel --stacktrace --warning-mode all --console=plain --info
+          ./gradlew clean :app:assembleDebug --no-daemon --no-parallel --stacktrace --warning-mode all --console=plain --info --scan
