@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application") version "8.5.2"
     id("org.jetbrains.kotlin.android") version "2.0.0"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0"
     id("com.google.devtools.ksp") version "2.0.0-1.0.21"
 }
 
@@ -39,9 +40,7 @@ android {
         buildConfig = true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.6.10"
-    }
+    // composeOptions is managed by Kotlin Compose plugin in Kotlin 2.0+
 
     packaging {
         resources {
