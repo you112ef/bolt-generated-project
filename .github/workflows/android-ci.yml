@@ -36,21 +36,16 @@ jobs:
       - name: Accept Android SDK licenses (non-interactive fallback)
         shell: bash
         run: |
-          set -e
+          set -o pipefail
           export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
-          yes | "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          if [ -x "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" ]; then
+            yes | "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          fi
+          if [ -x "${ANDROID_SDK_ROOT}/cmdline-tools/16.0/bin/sdkmanager" ]; then
+            yes | "${ANDROID_SDK_ROOT}/cmdline-tools/16.0/bin/sdkmanager" --licenses || true
+          fi
+          yes | sdkmanager --licenses || true
           yes | "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" || true
-
-      - name: Install Gradle CLI to generate wrapper
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gradle
-          gradle -v
-
-      - name: Generate Gradle Wrapper (8.7)
-        run: |
-          gradle wrapper --gradle-version 8.7
-          chmod +x gradlew
 
       - name: Set up Gradle (validate wrapper, enable scans)
         uses: gradle/actions/setup-gradle@v3
