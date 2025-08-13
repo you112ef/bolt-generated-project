@@ -43,6 +43,12 @@ jobs:
             platforms;android-34
             build-tools;34.0.0
 
+      - name: Force-accept Android SDK licenses (non-interactive)
+        shell: bash
+        run: |
+          yes | sdkmanager --licenses || true
+          yes | sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" || true
+
       - name: Generate Gradle Wrapper (if missing)
         run: |
           if [ ! -f ./gradlew ]; then
