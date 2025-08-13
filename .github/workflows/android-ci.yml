@@ -25,6 +25,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.7
+          cache-disabled: true
 
       - name: Install Android SDK (cmdline-tools)
         uses: android-actions/setup-android@v3
@@ -52,13 +53,3 @@ jobs:
           ORG_GRADLE_PROJECT_orgGradleJvmArgs: "-Xmx3g -Dfile.encoding=UTF-8"
         run: |
           ./gradlew clean :app:assembleDebug --no-daemon --stacktrace --warning-mode all
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
