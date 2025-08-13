@@ -23,16 +23,6 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Gradle (no provisioning)
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          cache-disabled: true
-          develocity-injection-enabled: true
-          build-scan-publish: true
-          build-scan-terms-of-service-url: https://gradle.com/terms-of-service
-          build-scan-terms-of-service-agree: yes
-          validate-wrappers: true
-
       - name: Install Android SDK and packages
         uses: android-actions/setup-android@v3
         with:
@@ -53,6 +43,16 @@ jobs:
         run: |
           gradle wrapper --gradle-version 8.7
           chmod +x gradlew
+
+      - name: Set up Gradle (validate wrapper, enable scans)
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-disabled: true
+          develocity-injection-enabled: true
+          build-scan-publish: true
+          build-scan-terms-of-service-url: https://gradle.com/terms-of-service
+          build-scan-terms-of-service-agree: yes
+          validate-wrappers: true
 
       - name: Print Gradle Version
         run: ./gradlew -v --scan
