@@ -4,26 +4,24 @@ import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -44,8 +42,8 @@ fun EditorScreen(nav: androidx.navigation.NavController) {
 		Text("Quick Notes & Expenses — Sample")
 		Spacer(Modifier.height(12.dp))
 		Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-			NoteInput(onAdd = { title, desc -> vm.addNote(title, desc) })
-			ExpenseInput(onAdd = { amount, reason -> vm.addExpense(amount, reason) })
+			NoteInput(modifier = Modifier.weight(1f), onAdd = { title, desc -> vm.addNote(title, desc) })
+			ExpenseInput(modifier = Modifier.weight(1f), onAdd = { amount, reason -> vm.addExpense(amount, reason) })
 		}
 		Spacer(Modifier.height(12.dp))
 		Row(Modifier.fillMaxWidth()) {
@@ -64,10 +62,10 @@ fun EditorScreen(nav: androidx.navigation.NavController) {
 }
 
 @Composable
-private fun NoteInput(onAdd: (String, String) -> Unit) {
+private fun NoteInput(modifier: Modifier = Modifier, onAdd: (String, String) -> Unit) {
 	var title by remember { mutableStateOf("") }
 	var desc by remember { mutableStateOf("") }
-	Column(Modifier.weight(1f)) {
+	Column(modifier) {
 		OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") })
 		OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") })
 		Button(onClick = { if (title.isNotBlank()) { onAdd(title, desc); title = ""; desc = "" } }) { Text("Add Note") }
@@ -75,10 +73,10 @@ private fun NoteInput(onAdd: (String, String) -> Unit) {
 }
 
 @Composable
-private fun ExpenseInput(onAdd: (Double, String) -> Unit) {
+private fun ExpenseInput(modifier: Modifier = Modifier, onAdd: (Double, String) -> Unit) {
 	var amount by remember { mutableStateOf("") }
 	var reason by remember { mutableStateOf("") }
-	Column(Modifier.weight(1f)) {
+	Column(modifier) {
 		OutlinedTextField(value = amount, onValueChange = { amount = it }, label = { Text("Amount") })
 		OutlinedTextField(value = reason, onValueChange = { reason = it }, label = { Text("Reason") })
 		Button(onClick = { amount.toDoubleOrNull()?.let { onAdd(it, reason); amount = ""; reason = "" } }) { Text("Add Expense") }
