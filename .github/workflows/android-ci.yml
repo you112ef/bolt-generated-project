@@ -49,8 +49,11 @@ jobs:
       - name: Print Gradle Version
         run: ./gradlew -v
 
+      - name: Compile Kotlin (Debug) with verbose logs
+        run: ./gradlew :app:compileDebugKotlin --no-daemon --stacktrace --console=plain --info
+
       - name: Clean and Assemble Debug
         env:
           ORG_GRADLE_PROJECT_orgGradleJvmArgs: "-Xmx3g -Dfile.encoding=UTF-8"
         run: |
-          ./gradlew clean :app:assembleDebug --no-daemon --stacktrace --warning-mode all
+          ./gradlew clean :app:assembleDebug --no-daemon --stacktrace --warning-mode all --console=plain --info
