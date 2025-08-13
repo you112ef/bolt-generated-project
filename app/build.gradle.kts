@@ -72,16 +72,19 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
-
     // Room + KSP
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
-    // WorkManager (optional for long-running tasks)
+    // WorkManager
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // Encrypted preferences for API keys
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

@@ -33,6 +33,7 @@ fun App() {
 				composable("home") { HomeScreen(navController) }
 				composable("editor") { EditorScreen(navController) }
 				composable("build") { BuildScreen(navController) }
+				composable("settings") { com.aide.app.ui.SettingsScreen(navController) }
 			}
 		}
 	}

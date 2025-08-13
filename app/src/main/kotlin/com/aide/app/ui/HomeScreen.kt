@@ -40,6 +40,10 @@ fun HomeScreen(nav: NavController) {
 
 	Column(Modifier.fillMaxSize().padding(16.dp)) {
 		Text("AIDE — Projects")
+		Spacer(Modifier.height(6.dp))
+		Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+			Button(onClick = { nav.navigate("settings") }) { Text("AI Settings") }
+		}
 		Spacer(Modifier.height(12.dp))
 		Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
 			OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Project Name") })
