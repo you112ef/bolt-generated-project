@@ -1,0 +1,3 @@
+[submodule "vendor/Bbolt.diy"]
+	path = vendor/Bbolt.diy
+	url = https://github.com/you112ef/Bbolt.diy.git
