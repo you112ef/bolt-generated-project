@@ -33,6 +33,14 @@ jobs:
             platforms;android-34
             build-tools;34.0.0
 
+      - name: Accept Android SDK licenses (non-interactive fallback)
+        shell: bash
+        run: |
+          set -e
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          yes | "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          yes | "${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" || true
+
       - name: Install Gradle CLI to generate wrapper
         run: |
           sudo apt-get update
