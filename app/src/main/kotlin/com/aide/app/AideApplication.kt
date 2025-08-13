@@ -1,6 +1,7 @@
 package com.aide.app
 
 import android.app.Application
+import android.util.Log
 import androidx.work.Configuration
 
 class AideApplication : Application(), Configuration.Provider {
@@ -9,8 +10,8 @@ class AideApplication : Application(), Configuration.Provider {
 		// Initialize singletons, DI, databases lazily when first used
 	}
 
-	override fun getWorkManagerConfiguration(): Configuration =
-		Configuration.Builder()
-			.setMinimumLoggingLevel(android.util.Log.INFO)
+	override val workManagerConfiguration: Configuration
+		get() = Configuration.Builder()
+			.setMinimumLoggingLevel(Log.INFO)
 			.build()
 }
