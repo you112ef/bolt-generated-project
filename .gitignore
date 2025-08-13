@@ -1,0 +1,29 @@
+# Gradle
+.gradle/
+**/build/
+**/out/
+/local.properties
+/.gradle/
+
+# IntelliJ/Android Studio
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Android
+captures/
+.externalNativeBuild/
+.cxx/
+app/release/
+app/debug/
+
+# Logs
+*.log
+
+# Room schemas (optional to track; uncomment next to include)
+# app/schemas/
+
+# Misc
+.DS_Store
+Thumbs.db
