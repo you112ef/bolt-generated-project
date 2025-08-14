@@ -35,10 +35,16 @@ jobs:
 
       - name: Install Android SDK (cmdline-tools)
         uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 12266719
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: true
 
-      - name: Install Android packages
+      - name: Install Android packages and accept all licenses
         shell: bash
         run: |
+          # Accept all Android SDK licenses including TV/XR licenses
+          set -o pipefail
           yes | sdkmanager --licenses || true
           sdkmanager "cmdline-tools;latest" || true
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
