@@ -8,10 +8,9 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       GRADLE_OPTS: "-Dorg.gradle.logging.stacktrace=all -Dorg.gradle.console=plain -Dorg.gradle.warning.mode=all -Dkotlin.incremental=false"
-    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,132 +25,50 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Install Android SDK
+      - name: Install Android SDK and packages
         uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: 12266719
-          packages: "platform-tools platforms;android-34 build-tools;34.0.0"
           accept-android-sdk-licenses: true
           log-accepted-android-sdk-licenses: true
+          packages: platform-tools platforms;android-34 build-tools;34.0.0
 
-      - name: Create Android SDK licenses directory
-        run: mkdir -p $ANDROID_HOME/licenses
-
-      - name: Pre-accept all Android SDK licenses
+      - name: Accept all Android SDK licenses
+        shell: bash
         run: |
-          # Create license files with known hashes to avoid interactive prompts
-          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > $ANDROID_HOME/licenses/android-sdk-preview-license
-          echo "601085b94cd77f0b54ff86406957099ebe79c4d6" > $ANDROID_HOME/licenses/android-googletv-license
-          echo "33b6a2b64607f11b759f320ef9dff4ae5c47d97a" > $ANDROID_HOME/licenses/google-gdk-license
-          echo "859f317696f67ef3d7f30a50a5560e7834b43903" > $ANDROID_HOME/licenses/intel-android-extra-license
-          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license-old
-          echo "79120722343a6f314e0719f863036c702b0e6b2a" > $ANDROID_HOME/licenses/android-sdk-arm-dbt-license
-
-      - name: Accept any remaining licenses
-        run: |
-          set -o pipefail
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-
-      - name: Install required Android packages
-        run: |
-          echo "Installing Android packages manually..."
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" || true  
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" || true
-
-      - name: Validate Gradle Wrapper
-        run: |
-          if [ ! -f ./gradlew ]; then
-            echo "❌ Gradle wrapper not found"
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME is set to: $ANDROID_HOME"
+          
+          # Find the correct sdkmanager path
+          SDKMANAGER_PATH=""
+          if [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMANAGER_PATH="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          elif [ -x "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager" ]; then
+            SDKMANAGER_PATH="$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
+          elif command -v sdkmanager >/dev/null 2>&1; then
+            SDKMANAGER_PATH="$(command -v sdkmanager)"
+          fi
+          
+          if [ -n "$SDKMANAGER_PATH" ]; then
+            echo "Using sdkmanager at: $SDKMANAGER_PATH"
+            echo "Accepting all Android SDK licenses..."
+            
+            # Accept all licenses by sending 'y' responses
+            yes | $SDKMANAGER_PATH --licenses >/dev/null 2>&1 || true
+            
+            echo "License acceptance completed."
+          else
+            echo "ERROR: Could not find sdkmanager"
             exit 1
           fi
-          chmod +x ./gradlew
 
-      - name: Set up Gradle
+      - name: Set up Gradle (validate wrapper, enable scans)
         uses: gradle/actions/setup-gradle@v3
         with:
-          cache-disabled: false
-          develocity-injection-enabled: true
-          build-scan-publish: true
-          build-scan-terms-of-service-url: https://gradle.com/terms-of-service
-          build-scan-terms-of-service-agree: yes
+          cache-disabled: true
+          develocity-injection-enabled: false
+          build-scan-publish: false
           validate-wrappers: true
 
-      - name: Print Gradle and Android SDK Info
-        run: |
-          echo "🔍 Gradle Version:"
-          ./gradlew --version
-          echo ""
-          echo "🔍 Android SDK Info:"
-          echo "ANDROID_HOME: $ANDROID_HOME"
-          echo "Available SDK packages:"
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list | head -20
-
-      - name: Clean Project
-        run: ./gradlew clean --no-daemon --stacktrace
-
-      - name: Compile Kotlin (Debug)
-        run: |
-          ./gradlew :app:compileDebugKotlin \
-            --no-daemon \
-            --stacktrace \
-            --console=plain \
-            --info \
-            --scan
-
-      - name: Assemble Debug APK
-        env:
-          ORG_GRADLE_PROJECT_orgGradleJvmArgs: "-Xmx3g -Dfile.encoding=UTF-8"
-        run: |
-          ./gradlew :app:assembleDebug \
-            --no-daemon \
-            --stacktrace \
-            --warning-mode all \
-            --console=plain \
-            --info \
-            --scan
-
-      - name: List Build Outputs (for debugging)
-        if: always()
-        run: |
-          echo "🔍 Build outputs:"
-          find . -name "build" -type d | head -10
-          echo ""
-          echo "📱 APK files:"
-          find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
-          echo ""
-          echo "📊 Reports directories:"
-          find . -name "reports" -type d 2>/dev/null || echo "No reports directories found"
-
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: debug-apk
-          path: app/build/outputs/apk/debug/
-          if-no-files-found: warn
-          retention-days: 30
-
-      - name: Upload Build Reports on Failure
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: build-reports
-          path: |
-            app/build/reports/
-            build/reports/
-            */build/reports/
-          if-no-files-found: ignore
-          retention-days: 7
-
-      - name: Upload Test Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results
-          path: |
-            app/build/test-results/
-            */build/test-results/
-          if-no-files-found: ignore
-          retention-days: 7
+      - name: Build with Gradle
+        run: ./gradlew clean build --no-daemon --stacktrace --warning-mode all --console=plain --info
