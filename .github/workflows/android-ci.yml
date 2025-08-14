@@ -30,41 +30,59 @@ jobs:
         with:
           cmdline-tools-version: 12266719
 
+      - name: Configure Android environment
+        shell: bash
+        run: |
+          ANDROID_SDK_PATH="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_HOME=$ANDROID_SDK_PATH" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_PATH" >> "$GITHUB_ENV"
+          echo "$ANDROID_SDK_PATH/platform-tools" >> "$GITHUB_PATH"
+          echo "::notice title=Android SDK path set::$ANDROID_SDK_PATH"
+
       - name: Accept all Android SDK licences (including TV/XR)
         shell: bash
         timeout-minutes: 5
         run: |
+          echo "::group::Accept Android SDK licenses"
           export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
           echo "Accepting all Android SDK licenses..."
           
-          # Function to accept licenses with timeout
+          accepted_any=0
           accept_licenses() {
             local sdkmanager_path="$1"
             if [ -x "$sdkmanager_path" ]; then
               echo "Using sdkmanager at: $sdkmanager_path"
               echo "y" | timeout 300 "$sdkmanager_path" --licenses > /dev/null 2>&1 || true
+              accepted_any=1
             fi
           }
           
-          # Try different sdkmanager locations
           accept_licenses "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           accept_licenses "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
           accept_licenses "$(which sdkmanager)"
           
-          echo "License acceptance completed."
+          if [ "$accepted_any" -eq 0 ]; then
+            echo "::warning title=SDK Manager not found::Could not locate sdkmanager to accept licenses."
+          else
+            echo "::notice title=Licenses accepted::Android SDK licenses accepted (where available)."
+          fi
+          echo "::endgroup::"
 
       - name: Install required Android packages
         shell: bash
         timeout-minutes: 10
         run: |
+          echo "::group::Install Android packages"
           export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
           echo "Installing Android packages..."
           
+          installed_any=0
           install_packages() {
             local sdkmanager_path="$1"
             if [ -x "$sdkmanager_path" ]; then
               echo "Using sdkmanager at: $sdkmanager_path"
               yes | "$sdkmanager_path" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" --sdk_root="${ANDROID_HOME}" || true
+              installed_any=1
             fi
           }
           
@@ -72,7 +90,12 @@ jobs:
           install_packages "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
           install_packages "$(command -v sdkmanager || true)"
           
-          echo "Android packages installation completed."
+          if [ "$installed_any" -eq 0 ]; then
+            echo "::warning title=SDK Manager not found::Could not locate sdkmanager to install packages."
+          else
+            echo "::notice title=Packages installed::Installed platform-tools, platforms;android-34, build-tools;34.0.0."
+          fi
+          echo "::endgroup::"
 
       - name: Set up Gradle (validate wrapper, enable scans)
         uses: gradle/actions/setup-gradle@v3
@@ -84,3 +107,13 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew clean build --no-daemon --stacktrace --warning-mode all --console=plain --info
+
+      - name: Job summary
+        if: always()
+        shell: bash
+        run: |
+          echo "### Android environment" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- JAVA_HOME: $JAVA_HOME" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ANDROID_HOME: ${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Installed: platform-tools, platforms;android-34, build-tools;34.0.0" >> "$GITHUB_STEP_SUMMARY"
