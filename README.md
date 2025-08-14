@@ -1,5 +1,19 @@
 # AIDE — Android IDE with AI and Build Export (MVP)
 
+[![Build Status](https://github.com/you112ef/bolt-generated-project/actions/workflows/android-ci.yml/badge.svg?branch=main)](https://github.com/you112ef/bolt-generated-project/actions/workflows/android-ci.yml)
+[![License](https://img.shields.io/github/license/you112ef/bolt-generated-project)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/you112ef/bolt-generated-project?style=social)](https://github.com/you112ef/bolt-generated-project/stargazers)
+[![Issues](https://img.shields.io/github/issues/you112ef/bolt-generated-project)](https://github.com/you112ef/bolt-generated-project/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/you112ef/bolt-generated-project)](https://github.com/you112ef/bolt-generated-project/commits)
+
+![Kotlin](https://img.shields.io/badge/Kotlin-1.9.24-7F52FF?logo=kotlin&logoColor=white)
+![Gradle](https://img.shields.io/badge/Gradle-8.7-02303A?logo=gradle&logoColor=white)
+![Android](https://img.shields.io/badge/Android-API%2026%2B-3DDC84?logo=android&logoColor=white)
+![CI/CD](https://img.shields.io/badge/GitHub%20Actions-Ready-2088FF?logo=github-actions&logoColor=white)
+![Compose](https://img.shields.io/badge/Jetpack%20Compose-1.5.14-4285F4?logo=jetpackcompose&logoColor=white)
+
+> **Android IDE with AI integration - Build APKs using GitHub Actions without Android Studio**
+
 This repository contains an Android app (Kotlin + Jetpack Compose + Room) that provides:
 - Project templates (Android/Flutter/Console/Node/Python + sample Notes/Expenses)
 - Basic editor sample (Notes & Expenses) with local Room storage
@@ -66,6 +80,21 @@ git submodule update --init --recursive
 # Install on connected device/emulator
 ./gradlew :app:installDebug
 ```
+
+### 🚀 GitHub Actions Build (No Android Studio Required!)
+This project supports building APKs using GitHub Actions without needing Android Studio locally:
+
+1. **Fork this repository**
+2. **Push changes** to trigger automatic builds
+3. **Download APKs** from the Actions artifacts
+4. **Manual trigger**: Go to Actions → Android CI → "Run workflow"
+
+The CI automatically:
+- ✅ Sets up Android SDK and accepts all licenses
+- ✅ Builds debug APK using Gradle
+- ✅ Runs unit tests
+- ✅ Uploads APK as downloadable artifact
+- ✅ Generates build reports
 
 ## Troubleshooting
 
