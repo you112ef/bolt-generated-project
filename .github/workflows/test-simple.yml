@@ -1,0 +1,30 @@
+name: Test Simple Workflow
+
+on:
+  push:
+    branches: [ main, cursor/** ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Simple test
+        run: |
+          echo "🎉 GitHub Actions is working!"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Event: ${{ github.event_name }}"
+          
+      - name: List project files
+        run: |
+          echo "📁 Project structure:"
+          ls -la
+          echo ""
+          echo "📱 Android files:"
+          find . -name "*.gradle*" -o -name "*.kt" | head -10
