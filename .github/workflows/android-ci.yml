@@ -50,13 +50,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           cache-disabled: true
-          develocity-injection-enabled: true
-          build-scan-publish: true
-          build-scan-terms-of-service-url: https://gradle.com/terms-of-service
-          build-scan-terms-of-service-agree: yes
+          develocity-injection-enabled: false
+          build-scan-publish: false
           validate-wrappers: true
 
       - name: Build with Gradle
         uses: gradle/actions@v3
         with:
-          arguments: clean build --no-daemon --stacktrace --warning-mode all --console=plain --info --scan
+          arguments: clean build --no-daemon --stacktrace --warning-mode all --console=plain --info
