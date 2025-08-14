@@ -14,23 +14,56 @@ jobs:
       GRADLE_OPTS: "-Dorg.gradle.logging.stacktrace=all -Dorg.gradle.console=plain -Dorg.gradle.warning.mode=all -Dkotlin.incremental=false"
     
     steps:
-      - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
+      - name: 📥 Checkout Repository (no external actions)
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "::group::Checkout"
+          git init .
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --no-tags --prune --depth=1 origin "$GITHUB_SHA"
+          git checkout --force FETCH_HEAD
+          git submodule sync --recursive || true
+          git -c protocol.version=2 submodule update --init --force --recursive || true
+          echo "::endgroup::"
 
-      - name: ☕ Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: gradle
+      - name: ☕ Install JDK 17 (no external actions)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::group::Install JDK 17"
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jdk-headless
+          JAVA_HOME_DIR=$(dirname $(dirname $(readlink -f $(which javac))))
+          echo "JAVA_HOME=$JAVA_HOME_DIR" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_DIR/bin" >> "$GITHUB_PATH"
+          java -version
+          echo "::endgroup::"
 
-      - name: 🤖 Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 12266719
+      - name: 🤖 Ensure Android SDK (no external actions)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::group::Ensure Android SDK"
+          DEFAULT_SDK="/usr/local/lib/android/sdk"
+          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$DEFAULT_SDK}}"
+          if [ ! -d "$SDK_DIR" ]; then
+            echo "Android SDK not found at $SDK_DIR; installing cmdline-tools locally..."
+            SDK_DIR="$HOME/android-sdk"
+            mkdir -p "$SDK_DIR/cmdline-tools"
+            curl -sSL -o /tmp/cmdline-tools.zip "https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip"
+            unzip -q -o /tmp/cmdline-tools.zip -d "$SDK_DIR/cmdline-tools"
+            if [ -d "$SDK_DIR/cmdline-tools/cmdline-tools" ]; then
+              mv "$SDK_DIR/cmdline-tools/cmdline-tools" "$SDK_DIR/cmdline-tools/latest"
+            fi
+          fi
+          echo "ANDROID_HOME=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "$SDK_DIR/platform-tools" >> "$GITHUB_PATH"
+          echo "Using ANDROID_HOME=$SDK_DIR"
+          echo "::endgroup::"
 
       - name: 📝 Create local.properties
         shell: bash
@@ -106,14 +139,11 @@ jobs:
             --sdk_root="$ANDROID_HOME" || true
           echo "✅ Package installation step finished"
 
-      - name: 🔧 Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          cache-disabled: false
-          cache-read-only: false
-          develocity-injection-enabled: false
-          build-scan-publish: false
-          validate-wrappers: true
+      - name: 🔧 Prepare Gradle wrapper
+        shell: bash
+        run: |
+          set -e
+          chmod +x ./gradlew || true
 
       - name: 📋 Gradle Info
         run: |
@@ -156,43 +186,7 @@ jobs:
           echo "📁 APK output directories:"
           find . -type d -path "*/outputs/apk/*" 2>/dev/null || echo "No APK output directories found"
           
-      - name: 📦 Upload Debug APK
-        uses: actions/upload-artifact@v4
-        if: success()
-        with:
-          name: aide-debug-apk-${{ github.run_number }}
-          path: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/debug/
-          retention-days: 30
-          if-no-files-found: warn
-
-      - name: 📋 Upload Test Results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: test-results-${{ github.run_number }}
-          path: |
-            app/build/test-results/
-            app/build/reports/tests/
-            */build/test-results/
-            */build/reports/tests/
-          retention-days: 7
-          if-no-files-found: ignore
-
-      - name: 🚨 Upload Build Reports on Failure
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: build-reports-${{ github.run_number }}
-          path: |
-            app/build/reports/
-            build/reports/
-            */build/reports/
-            .gradle/
-            gradle/
-          retention-days: 7
-          if-no-files-found: ignore
+      # Note: Upload steps removed due to policy: only actions from owner are allowed.
 
       - name: 📈 Build Summary
         if: always()
