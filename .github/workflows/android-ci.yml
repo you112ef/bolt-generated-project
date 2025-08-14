@@ -32,19 +32,31 @@ jobs:
           accept-android-sdk-licenses: true
           log-accepted-android-sdk-licenses: true
           packages: platform-tools platforms;android-34 build-tools;34.0.0
+        env:
+          ANDROID_SDK_LICENSES_ACCEPTED: "true"
 
       - name: Accept all Android SDK licences (including TV/XR)
         shell: bash
+        timeout-minutes: 5
         run: |
-          set -o pipefail
           export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          if [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
-            yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
-          fi
-          if [ -x "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager" ]; then
-            yes | "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager" --licenses || true
-          fi
-          yes | sdkmanager --licenses || true
+          echo "Accepting all Android SDK licenses..."
+          
+          # Function to accept licenses with timeout
+          accept_licenses() {
+            local sdkmanager_path="$1"
+            if [ -x "$sdkmanager_path" ]; then
+              echo "Using sdkmanager at: $sdkmanager_path"
+              echo "y" | timeout 300 "$sdkmanager_path" --licenses > /dev/null 2>&1 || true
+            fi
+          }
+          
+          # Try different sdkmanager locations
+          accept_licenses "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          accept_licenses "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
+          accept_licenses "$(which sdkmanager)"
+          
+          echo "License acceptance completed."
 
       - name: Set up Gradle (validate wrapper, enable scans)
         uses: gradle/actions/setup-gradle@v3
