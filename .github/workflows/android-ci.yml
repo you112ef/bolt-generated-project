@@ -33,9 +33,13 @@ jobs:
           cmdline-tools-version: 12266719
 
       - name: 📝 Create local.properties
+        shell: bash
         run: |
-          echo "🔧 Creating local.properties with correct Android SDK path..."
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "🔧 Creating local.properties with Android SDK path: $SDK_DIR"
+          echo "sdk.dir=$SDK_DIR" > local.properties
+          # Export ANDROID_HOME to ensure consistency across steps
+          echo "ANDROID_HOME=$SDK_DIR" >> "$GITHUB_ENV"
           echo "✅ Created local.properties:"
           cat local.properties
 
