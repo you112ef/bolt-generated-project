@@ -108,15 +108,28 @@ jobs:
             --info \
             --scan
 
+      - name: List Build Outputs (for debugging)
+        if: always()
+        run: |
+          echo "🔍 Build outputs:"
+          find . -name "build" -type d | head -10
+          echo ""
+          echo "📱 APK files:"
+          find . -name "*.apk" -type f 2>/dev/null || echo "No APK files found"
+          echo ""
+          echo "📊 Reports directories:"
+          find . -name "reports" -type d 2>/dev/null || echo "No reports directories found"
+
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         if: success()
         with:
           name: debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug/
+          if-no-files-found: warn
           retention-days: 30
 
-      - name: Upload Build Reports
+      - name: Upload Build Reports on Failure
         uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -124,4 +137,17 @@ jobs:
           path: |
             app/build/reports/
             build/reports/
+            */build/reports/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            app/build/test-results/
+            */build/test-results/
+          if-no-files-found: ignore
           retention-days: 7
