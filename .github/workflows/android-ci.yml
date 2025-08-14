@@ -25,15 +25,10 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Install Android SDK and packages
+      - name: Install Android cmdline-tools
         uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: 12266719
-          accept-android-sdk-licenses: true
-          log-accepted-android-sdk-licenses: true
-          packages: platform-tools platforms;android-34 build-tools;34.0.0
-        env:
-          ANDROID_SDK_LICENSES_ACCEPTED: "true"
 
       - name: Accept all Android SDK licences (including TV/XR)
         shell: bash
@@ -57,6 +52,27 @@ jobs:
           accept_licenses "$(which sdkmanager)"
           
           echo "License acceptance completed."
+
+      - name: Install required Android packages
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "Installing Android packages..."
+          
+          install_packages() {
+            local sdkmanager_path="$1"
+            if [ -x "$sdkmanager_path" ]; then
+              echo "Using sdkmanager at: $sdkmanager_path"
+              yes | "$sdkmanager_path" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" --sdk_root="${ANDROID_HOME}" || true
+            fi
+          }
+          
+          install_packages "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          install_packages "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
+          install_packages "$(command -v sdkmanager || true)"
+          
+          echo "Android packages installation completed."
 
       - name: Set up Gradle (validate wrapper, enable scans)
         uses: gradle/actions/setup-gradle@v3
