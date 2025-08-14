@@ -30,10 +30,7 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: 12266719
-          packages: |
-            platform-tools
-            platforms;android-34
-            build-tools;34.0.0
+          packages: "platform-tools platforms;android-34 build-tools;34.0.0"
           accept-android-sdk-licenses: true
           log-accepted-android-sdk-licenses: true
 
@@ -55,6 +52,13 @@ jobs:
         run: |
           set -o pipefail
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Install required Android packages
+        run: |
+          echo "Installing Android packages manually..."
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" || true
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" || true  
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;34.0.0" || true
 
       - name: Validate Gradle Wrapper
         run: |
