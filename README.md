@@ -31,7 +31,7 @@ Before building the project, you need to set up the Android SDK:
    - Install Android SDK API level 34 and build-tools 34.0.0
 
 2. **Configure SDK Location**
-   - Copy `local.properties.example` to `local.properties` (if it doesn't exist)
+   - Copy `local.properties.example` to `local.properties`
    - Edit `local.properties` and set your Android SDK path:
      ```properties
      sdk.dir=/path/to/your/android/sdk

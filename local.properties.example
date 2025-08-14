@@ -1,0 +1,29 @@
+# This file contains machine-specific properties for the Android project.
+# For more information about this file, see:
+# https://developer.android.com/studio/build#properties-files
+
+# ⚠️  IMPORTANT: Copy this file to 'local.properties' and set your Android SDK path
+# The 'local.properties' file should NOT be committed to version control
+
+# Location of the Android SDK. This is only used by Gradle.
+# REPLACE the path below with your actual Android SDK location:
+sdk.dir=/path/to/your/android/sdk
+
+# 📱 Common Android SDK locations:
+# macOS:    /Users/[username]/Library/Android/sdk
+# Linux:    /home/[username]/Android/Sdk  
+# Windows:  C:\\Users\\[username]\\AppData\\Local\\Android\\Sdk
+
+# 💡 To find your SDK location:
+# 1. Open Android Studio
+# 2. Go to File → Settings (or Android Studio → Preferences on macOS)
+# 3. Navigate to Appearance & Behavior → System Settings → Android SDK
+# 4. Copy the "Android SDK Location" path and paste it above
+
+# 🔧 Alternative: Set ANDROID_HOME environment variable
+# export ANDROID_HOME=/path/to/your/android/sdk
+# Then you can comment out or remove the sdk.dir line above
+
+# 🚀 For GitHub Actions CI/CD:
+# The workflow automatically creates local.properties with the correct ANDROID_HOME
+# No manual configuration needed for CI builds!
