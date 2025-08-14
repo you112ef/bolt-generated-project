@@ -11,103 +11,145 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     env:
-      GRADLE_OPTS: "-Dorg.gradle.logging.stacktrace=all -Dorg.gradle.console=plain -Dorg.gradle.warning.mode=all -Dkotlin.incremental=false"
+      GRADLE_OPTS: -Dorg.gradle.logging.stacktrace=all -Dorg.gradle.console=plain -Dorg.gradle.warning.mode=all -Dkotlin.incremental=false
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: gradle
-
-      - name: Install Android cmdline-tools
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 12266719
-
-      - name: Configure Android environment
+      - name: Checkout (inline)
         shell: bash
         run: |
-          ANDROID_SDK_PATH="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          echo "ANDROID_HOME=$ANDROID_SDK_PATH" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_PATH" >> "$GITHUB_ENV"
-          echo "$ANDROID_SDK_PATH/platform-tools" >> "$GITHUB_PATH"
-          echo "::notice title=Android SDK path set::$ANDROID_SDK_PATH"
+          set -euo pipefail
+          echo "::group::Checkout"
+          git init .
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --no-tags --prune --depth=1 origin "$GITHUB_SHA"
+          git checkout --force FETCH_HEAD
+          git submodule sync --recursive || true
+          git -c protocol.version=2 submodule update --init --force --recursive || true
+          echo "::endgroup::"
 
-      - name: Accept all Android SDK licences (including TV/XR)
+      - name: Install JDK 17 (inline)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::group::Install JDK 17"
+          sudo apt-get update
+          sudo apt-get install -y openjdk-17-jdk-headless
+          JAVA_HOME_DIR=$(dirname $(dirname $(readlink -f $(which javac))))
+          echo "JAVA_HOME=$JAVA_HOME_DIR" >> "$GITHUB_ENV"
+          echo "$JAVA_HOME_DIR/bin" >> "$GITHUB_PATH"
+          java -version
+          echo "::endgroup::"
+
+      - name: Ensure Android SDK (inline)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::group::Ensure Android SDK"
+          DEFAULT_SDK="/usr/local/lib/android/sdk"
+          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$DEFAULT_SDK}}"
+          if [ ! -d "$SDK_DIR" ]; then
+            echo "Android SDK not found at $SDK_DIR; installing cmdline-tools locally..."
+            SDK_DIR="$HOME/android-sdk"
+            mkdir -p "$SDK_DIR/cmdline-tools"
+            curl -sSL -o /tmp/cmdline-tools.zip "https://dl.google.com/android/repository/commandlinetools-linux-12266719_latest.zip"
+            unzip -q -o /tmp/cmdline-tools.zip -d "$SDK_DIR/cmdline-tools"
+            if [ -d "$SDK_DIR/cmdline-tools/cmdline-tools" ]; then
+              mv "$SDK_DIR/cmdline-tools/cmdline-tools" "$SDK_DIR/cmdline-tools/latest"
+            fi
+          fi
+          echo "ANDROID_HOME=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "$SDK_DIR/platform-tools" >> "$GITHUB_PATH"
+          echo "Using ANDROID_HOME=$SDK_DIR"
+          echo "::endgroup::"
+
+      - name: Generate local.properties
+        shell: bash
+        run: |
+          SDK_DIR="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          echo "🔧 Creating local.properties with Android SDK path: $SDK_DIR"
+          echo "sdk.dir=$SDK_DIR" > local.properties
+          echo "ANDROID_HOME=$SDK_DIR" >> "$GITHUB_ENV"
+          echo "✅ Created local.properties:"
+          cat local.properties
+
+      - name: Accept Android SDK licenses (inline)
         shell: bash
         timeout-minutes: 5
         run: |
-          echo "::group::Accept Android SDK licenses"
+          set -e
           export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          echo "Accepting all Android SDK licenses..."
-          
-          accepted_any=0
-          accept_licenses() {
-            local sdkmanager_path="$1"
-            if [ -x "$sdkmanager_path" ]; then
-              echo "Using sdkmanager at: $sdkmanager_path"
-              echo "y" | timeout 300 "$sdkmanager_path" --licenses > /dev/null 2>&1 || true
-              accepted_any=1
-            fi
-          }
-          
-          accept_licenses "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          accept_licenses "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
-          accept_licenses "$(which sdkmanager)"
-          
-          if [ "$accepted_any" -eq 0 ]; then
-            echo "::warning title=SDK Manager not found::Could not locate sdkmanager to accept licenses."
-          else
-            echo "::notice title=Licenses accepted::Android SDK licenses accepted (where available)."
+          SDKMANAGER_PATH=""
+          if [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMANAGER_PATH="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          elif [ -x "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager" ]; then
+            SDKMANAGER_PATH="$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
+          elif command -v sdkmanager >/dev/null 2>&1; then
+            SDKMANAGER_PATH="$(command -v sdkmanager)"
           fi
-          echo "::endgroup::"
+          if [ -n "$SDKMANAGER_PATH" ]; then
+            echo "📱 Using sdkmanager at: $SDKMANAGER_PATH"
+            echo "✅ Accepting all Android SDK licenses..."
+            yes | timeout 300 "$SDKMANAGER_PATH" --licenses >/dev/null 2>&1 || true
+            echo "🎉 License acceptance completed."
+          else
+            echo "❌ ERROR: Could not find sdkmanager"
+            echo "Available files in cmdline-tools:"
+            find "$ANDROID_HOME" -name "sdkmanager" 2>/dev/null || echo "No sdkmanager found"
+            exit 1
+          fi
 
-      - name: Install required Android packages
+      - name: Install required Android packages (inline)
         shell: bash
         timeout-minutes: 10
         run: |
-          echo "::group::Install Android packages"
+          set -e
           export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
-          echo "Installing Android packages..."
-          
-          installed_any=0
-          install_packages() {
-            local sdkmanager_path="$1"
-            if [ -x "$sdkmanager_path" ]; then
-              echo "Using sdkmanager at: $sdkmanager_path"
-              yes | "$sdkmanager_path" --install "platform-tools" "platforms;android-34" "build-tools;34.0.0" --sdk_root="${ANDROID_HOME}" || true
-              installed_any=1
-            fi
-          }
-          
-          install_packages "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          install_packages "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
-          install_packages "$(command -v sdkmanager || true)"
-          
-          if [ "$installed_any" -eq 0 ]; then
-            echo "::warning title=SDK Manager not found::Could not locate sdkmanager to install packages."
-          else
-            echo "::notice title=Packages installed::Installed platform-tools, platforms;android-34, build-tools;34.0.0."
+          SDKMANAGER_PATH=""
+          if [ -x "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" ]; then
+            SDKMANAGER_PATH="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          elif [ -x "$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager" ]; then
+            SDKMANAGER_PATH="$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
+          elif command -v sdkmanager >/dev/null 2>&1; then
+            SDKMANAGER_PATH="$(command -v sdkmanager)"
           fi
-          echo "::endgroup::"
+          if [ -z "$SDKMANAGER_PATH" ]; then
+            echo "❌ ERROR: Could not find sdkmanager for package installation"
+            exit 1
+          fi
+          echo "📦 Installing: platform-tools, platforms;android-34, build-tools;34.0.0"
+          yes | "$SDKMANAGER_PATH" --install \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            --sdk_root="$ANDROID_HOME" || true
+          echo "✅ Package installation step finished"
 
-      - name: Set up Gradle (validate wrapper, enable scans)
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          cache-disabled: true
-          develocity-injection-enabled: false
-          build-scan-publish: false
-          validate-wrappers: true
+      - name: Prepare Gradle
+        shell: bash
+        run: |
+          set -e
+          chmod +x ./gradlew || true
 
-      - name: Build with Gradle
-        run: ./gradlew clean build --no-daemon --stacktrace --warning-mode all --console=plain --info
+      - name: Gradle info
+        shell: bash
+        run: |
+          echo "🔍 Gradle Version:"
+          ./gradlew --version || echo "Failed to get Gradle version"
+          echo ""
+          echo "🔍 Project Info:"
+          ./gradlew projects || echo "Failed to list projects"
+
+      - name: Clean
+        shell: bash
+        run: |
+          echo "🧹 Cleaning project..."
+          ./gradlew clean --no-daemon --stacktrace --info
+          echo "✅ Clean completed"
+
+      - name: Build
+        shell: bash
+        run: |
+          ./gradlew build --no-daemon --stacktrace --warning-mode all --console=plain --info
 
       - name: Job summary
         if: always()
