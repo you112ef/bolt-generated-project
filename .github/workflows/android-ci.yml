@@ -55,6 +55,4 @@ jobs:
           validate-wrappers: true
 
       - name: Build with Gradle
-        uses: gradle/actions@v3
-        with:
-          arguments: clean build --no-daemon --stacktrace --warning-mode all --console=plain --info
+        run: ./gradlew clean build --no-daemon --stacktrace --warning-mode all --console=plain --info
