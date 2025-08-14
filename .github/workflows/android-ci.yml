@@ -11,60 +11,117 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GRADLE_OPTS: "-Dorg.gradle.logging.stacktrace=all -Dorg.gradle.console=plain -Dorg.gradle.warning.mode=all -Dkotlin.incremental=false"
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+          cache: gradle
 
-      - name: Set up Gradle 8.7
+      - name: Install Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 12266719
+          packages: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: true
+
+      - name: Create Android SDK licenses directory
+        run: mkdir -p $ANDROID_HOME/licenses
+
+      - name: Pre-accept all Android SDK licenses
+        run: |
+          # Create license files with known hashes to avoid interactive prompts
+          echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" > $ANDROID_HOME/licenses/android-sdk-preview-license
+          echo "601085b94cd77f0b54ff86406957099ebe79c4d6" > $ANDROID_HOME/licenses/android-googletv-license
+          echo "33b6a2b64607f11b759f320ef9dff4ae5c47d97a" > $ANDROID_HOME/licenses/google-gdk-license
+          echo "859f317696f67ef3d7f30a50a5560e7834b43903" > $ANDROID_HOME/licenses/intel-android-extra-license
+          echo "84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_HOME/licenses/android-sdk-preview-license-old
+          echo "79120722343a6f314e0719f863036c702b0e6b2a" > $ANDROID_HOME/licenses/android-sdk-arm-dbt-license
+
+      - name: Accept any remaining licenses
+        run: |
+          set -o pipefail
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Validate Gradle Wrapper
+        run: |
+          if [ ! -f ./gradlew ]; then
+            echo "❌ Gradle wrapper not found"
+            exit 1
+          fi
+          chmod +x ./gradlew
+
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
-          gradle-version: 8.7
-          cache-disabled: true
+          cache-disabled: false
           develocity-injection-enabled: true
           build-scan-publish: true
           build-scan-terms-of-service-url: https://gradle.com/terms-of-service
           build-scan-terms-of-service-agree: yes
+          validate-wrappers: true
 
-      - name: Install Android SDK (cmdline-tools)
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: 12266719
-          accept-android-sdk-licenses: true
-          log-accepted-android-sdk-licenses: true
-
-      - name: Install Android packages and accept all licenses
-        shell: bash
+      - name: Print Gradle and Android SDK Info
         run: |
-          # Accept all Android SDK licenses including TV/XR licenses
-          set -o pipefail
-          yes | sdkmanager --licenses || true
-          sdkmanager "cmdline-tools;latest" || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          echo "🔍 Gradle Version:"
+          ./gradlew --version
+          echo ""
+          echo "🔍 Android SDK Info:"
+          echo "ANDROID_HOME: $ANDROID_HOME"
+          echo "Available SDK packages:"
+          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --list | head -20
 
-      - name: Generate Gradle Wrapper (if missing)
+      - name: Clean Project
+        run: ./gradlew clean --no-daemon --stacktrace
+
+      - name: Compile Kotlin (Debug)
         run: |
-          if [ ! -f ./gradlew ]; then
-            echo "Gradle wrapper missing, generating..."
-            gradle wrapper --gradle-version 8.7
-            chmod +x gradlew
-          fi
+          ./gradlew :app:compileDebugKotlin \
+            --no-daemon \
+            --stacktrace \
+            --console=plain \
+            --info \
+            --scan
 
-      - name: Print Gradle Version
-        run: ./gradlew -v --scan
-
-      - name: Compile Kotlin (Debug) with verbose logs
-        run: ./gradlew :app:compileDebugKotlin --no-daemon --no-parallel --stacktrace --console=plain --info --scan
-
-      - name: Clean and Assemble Debug
+      - name: Assemble Debug APK
         env:
           ORG_GRADLE_PROJECT_orgGradleJvmArgs: "-Xmx3g -Dfile.encoding=UTF-8"
         run: |
-          ./gradlew clean :app:assembleDebug --no-daemon --no-parallel --stacktrace --warning-mode all --console=plain --info --scan
+          ./gradlew :app:assembleDebug \
+            --no-daemon \
+            --stacktrace \
+            --warning-mode all \
+            --console=plain \
+            --info \
+            --scan
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: Upload Build Reports
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-reports
+          path: |
+            app/build/reports/
+            build/reports/
+          retention-days: 7
