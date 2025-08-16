@@ -1,0 +1,73 @@
+name: Build Release APK (Simple)
+
+on:
+  push:
+    branches:
+      - cursor/**
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ☕ Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: 🤖 Set up Android SDK
+        uses: android-actions/setup-android@v0
+        with:
+          sdk-platform: '34'
+          sdk-build-tools: '34.0.0'
+
+      - name: 📝 Create local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          echo "✅ Created local.properties with Android SDK path: $ANDROID_HOME"
+
+      - name: ✅ Accept Android SDK Licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
+
+      - name: 🔧 Make Gradle executable
+        run: chmod +x ./gradlew
+
+      - name: 🧹 Clean Project
+        run: ./gradlew clean --no-daemon
+
+      - name: 🔨 Build Release APK
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: 📱 Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-simple
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: 📊 Build Summary
+        if: always()
+        run: |
+          echo "## 🎯 Simple Release Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
+            APK_SIZE=$(du -h "app/build/outputs/apk/release/app-release.apk" | cut -f1)
+            echo "✅ **Build Status**: SUCCESS" >> $GITHUB_STEP_SUMMARY
+            echo "📱 **APK Size**: $APK_SIZE" >> $GITHUB_STEP_SUMMARY
+            echo "📦 **APK Name**: app-release.apk" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Build Status**: FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "🔍 **Debug Info**: No APK file found" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **Repository**: [AIDE Android App](https://github.com/${{ github.repository }})" >> $GITHUB_STEP_SUMMARY
+          echo "🌟 **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "🏃 **Run Number**: \`${{ github.run_number }}\`" >> $GITHUB_STEP_SUMMARY
